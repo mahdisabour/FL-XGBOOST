@@ -1,0 +1,7 @@
+
+processed_data*/
+data/
+logs/
+env/
+__pycache__/
+result.txt
