@@ -5,6 +5,8 @@ from logging import INFO
 from datasets import Dataset, DatasetDict
 import xgboost as xgb
 
+import pandas as pd
+from sklearn.model_selection import train_test_split
 import flwr as fl
 from flwr_datasets import FederatedDataset
 from flwr.common.logger import log
@@ -21,6 +23,8 @@ from flwr.common import (
 )
 from flwr_datasets.partitioner import IidPartitioner
 
+import data_handler
+
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -35,46 +39,24 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-# Define data partitioning related functions
-def train_test_split(partition: Dataset, test_fraction: float, seed: int):
-    """Split the data into train and validation set given split rate."""
-    train_test = partition.train_test_split(test_size=test_fraction, seed=seed)
-    partition_train = train_test["train"]
-    partition_test = train_test["test"]
-
-    num_train = len(partition_train)
-    num_test = len(partition_test)
-
-    return partition_train, partition_test, num_train, num_test
-
-
-def transform_dataset_to_dmatrix(data: Union[Dataset, DatasetDict]) -> xgb.core.DMatrix:
+def transform_dataset_to_dmatrix(data: pd.DataFrame) -> xgb.core.DMatrix:
     """Transform dataset to DMatrix format for xgboost."""
-    x = data["inputs"]
-    y = data["label"]
+    x, y = data_handler.get_x_y(df=data, reshape=False)
     new_data = xgb.DMatrix(x, label=y)
     return new_data
 
 
-# Load (HIGGS) dataset and conduct partitioning
-# We use a small subset (num_partitions=30) of the dataset for demonstration to speed up the data loading process.
-partitioner = IidPartitioner(num_partitions=30)
-fds = FederatedDataset(dataset="jxie/higgs", partitioners={"train": partitioner})
-
 # Load the partition for this `partition_id`
 log(INFO, "Loading partition...")
-partition = fds.load_partition(partition_id=args.partition_id, split="train")
-partition.set_format("numpy")
-
-# Train/test splitting
-train_data, valid_data, num_train, num_val = train_test_split(
-    partition, test_fraction=0.2, seed=42
+paths = data_handler.get_paths(
+    base_path="data",
+    client_num=args.partition_id,
+    num_of_clients=8
 )
+data = data_handler.load_dataset(paths=paths, preprocess=True, sample_size=-1)
+train, valid = train_test_split(data, test_size=0.1)
 
-# Reformat data to DMatrix for xgboost
-log(INFO, "Reformatting data...")
-train_dmatrix = transform_dataset_to_dmatrix(train_data)
-valid_dmatrix = transform_dataset_to_dmatrix(valid_data)
+num_train, num_val = len(train), len(valid)
 
 # Hyper-parameters for xgboost training
 num_local_round = 1
@@ -94,19 +76,21 @@ params = {
 class XgbClient(fl.client.Client):
     def __init__(
         self,
-        train_dmatrix,
-        valid_dmatrix,
+        train_data,
+        valid_data,
         num_train,
         num_val,
         num_local_round,
         params,
     ):
-        self.train_dmatrix = train_dmatrix
-        self.valid_dmatrix = valid_dmatrix
         self.num_train = num_train
         self.num_val = num_val
         self.num_local_round = num_local_round
         self.params = params
+        self.train_data = train_data
+        self.valid_data = valid_data
+        self.train_dmatrix = None
+        self.valid_dmatrix = None
 
     def get_parameters(self, ins: GetParametersIns) -> GetParametersRes:
         _ = (self, ins)
@@ -133,6 +117,15 @@ class XgbClient(fl.client.Client):
 
     def fit(self, ins: FitIns) -> FitRes:
         global_round = int(ins.config["global_round"])
+        all_rounds = int(ins.config["all_rounds"])
+        train_step = len(self.train_data) // all_rounds
+        train_data = self.train_data[(global_round-1)*train_step:global_round*train_step]
+
+        # Reformat data to DMatrix for xgboost
+        log(INFO, "Reformatting data...")
+        self.train_dmatrix = transform_dataset_to_dmatrix(train_data)
+        self.valid_dmatrix = transform_dataset_to_dmatrix(self.valid_data)
+
         if global_round == 1:
             # First round local training
             bst = xgb.train(
@@ -198,8 +191,8 @@ class XgbClient(fl.client.Client):
 fl.client.start_client(
     server_address="127.0.0.1:8080",
     client=XgbClient(
-        train_dmatrix,
-        valid_dmatrix,
+        train,
+        valid,
         num_train,
         num_val,
         num_local_round,

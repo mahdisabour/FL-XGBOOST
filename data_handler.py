@@ -56,7 +56,8 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def load_dataset(paths: list[str], preprocess: bool = False, sample_size: float = 1) -> pd.DataFrame:
     df = load_dataframes(paths=paths)
-    df = df.sample(frac=sample_size)
+    if sample_size != -1:
+        df = df.sample(frac=sample_size)
     if preprocess:
         df = preprocess_data(df=df)
     return df
