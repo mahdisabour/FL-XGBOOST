@@ -12,7 +12,7 @@ import data_handler
 
 # FL experimental settings
 num_rounds = 20
-num_clients = 8
+NUM_CLIENTS = 8
 BASE_DATASET_PATH = "processed_data_2"
 LEARNING_RATE = 0.1
 
@@ -78,9 +78,9 @@ def config_func(rnd: int) -> Dict[str, str]:
 
 # Define strategy
 strategy = FedXgbBagging(
-    min_fit_clients=num_clients,
-    min_available_clients=num_clients,
-    min_evaluate_clients=num_clients,
+    min_fit_clients=NUM_CLIENTS,
+    min_available_clients=NUM_CLIENTS,
+    min_evaluate_clients=NUM_CLIENTS,
     fraction_evaluate=1.0,
     evaluate_metrics_aggregation_fn=None,
     on_evaluate_config_fn=config_func,

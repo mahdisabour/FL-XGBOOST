@@ -28,6 +28,7 @@ import data_handler
 
 BASE_DATASET_PATH = "processed_data_2"
 LEARNING_RATE = 0.1
+NUM_CLIENTS = 8
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -55,9 +56,9 @@ log(INFO, "Loading partition...")
 paths = data_handler.get_paths(
     base_path=BASE_DATASET_PATH,
     client_num=args.partition_id,
-    num_of_clients=8
+    num_of_clients=NUM_CLIENTS
 )
-data = data_handler.load_dataset(paths=paths, sample_size=-1)
+data = data_handler.load_dataset(paths=paths[:1], sample_size=-1)
 train, valid = train_test_split(data, test_size=0.05)
 
 num_train, num_val = len(train), len(valid)
