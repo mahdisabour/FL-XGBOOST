@@ -11,16 +11,14 @@ from flwr.common.logger import log
 import data_handler
 
 # FL experimental settings
-pool_size = 2
 num_rounds = 20
-num_clients_per_round = 2
-num_evaluate_clients = 2
-BASE_DATASET_PATH = "processed_data_3"
+num_clients = 8
+BASE_DATASET_PATH = "processed_data_2"
 
 
 BST_PARAMS = {
     "objective": "binary:logistic",
-    "eta": 0.1,  # Learning rate
+    "eta": 0.01,  # Learning rate
     "max_depth": 8,
     "eval_metric": "auc",
     "nthread": 16,
@@ -40,8 +38,7 @@ def transform_dataset_to_dmatrix(data: pd.DataFrame) -> xgb.core.DMatrix:
 def get_evaluate_fn():
     """Return a function for centralised evaluation."""
 
-    paths = data_handler.get_paths(8, 7, "data/")
-    test_data = data_handler.load_dataset(paths=paths, preprocess=True)
+    test_data = data_handler.load_dataset(paths=[f"{BASE_DATASET_PATH}/test.csv"])
     test_data = transform_dataset_to_dmatrix(test_data)
 
     def evaluate_fn(
@@ -70,16 +67,6 @@ def get_evaluate_fn():
     return evaluate_fn
 
 
-def evaluate_metrics_aggregation(eval_metrics):
-    """Return an aggregated metric (AUC) for evaluation."""
-    total_num = sum([num for num, _ in eval_metrics])
-    auc_aggregated = (
-        sum([metrics["AUC"] * num for num, metrics in eval_metrics]) / total_num
-    )
-    metrics_aggregated = {"AUC": auc_aggregated}
-    return metrics_aggregated
-
-
 def config_func(rnd: int) -> Dict[str, str]:
     """Return a configuration with global epochs."""
     config = {
@@ -91,12 +78,11 @@ def config_func(rnd: int) -> Dict[str, str]:
 
 # Define strategy
 strategy = FedXgbBagging(
-    fraction_fit=(float(num_clients_per_round) / pool_size),
-    min_fit_clients=num_clients_per_round,
-    min_available_clients=pool_size,
-    min_evaluate_clients=num_evaluate_clients,
+    min_fit_clients=num_clients,
+    min_available_clients=num_clients,
+    min_evaluate_clients=num_clients,
     fraction_evaluate=1.0,
-    evaluate_metrics_aggregation_fn=evaluate_metrics_aggregation,
+    evaluate_metrics_aggregation_fn=None,
     on_evaluate_config_fn=config_func,
     on_fit_config_fn=config_func,
     evaluate_function=get_evaluate_fn(),

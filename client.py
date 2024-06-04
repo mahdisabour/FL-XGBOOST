@@ -26,6 +26,9 @@ from flwr_datasets.partitioner import IidPartitioner
 import data_handler
 
 
+BASE_DATASET_PATH = "processed_data_2"
+
+
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # Define arguments parser for the client/partition ID.
@@ -49,12 +52,12 @@ def transform_dataset_to_dmatrix(data: pd.DataFrame) -> xgb.core.DMatrix:
 # Load the partition for this `partition_id`
 log(INFO, "Loading partition...")
 paths = data_handler.get_paths(
-    base_path="data",
+    base_path=BASE_DATASET_PATH,
     client_num=args.partition_id,
     num_of_clients=8
 )
-data = data_handler.load_dataset(paths=paths, preprocess=True, sample_size=-1)
-train, valid = train_test_split(data, test_size=0.1)
+data = data_handler.load_dataset(paths=paths, sample_size=-1)
+train, valid = train_test_split(data, test_size=0.05)
 
 num_train, num_val = len(train), len(valid)
 
@@ -62,7 +65,7 @@ num_train, num_val = len(train), len(valid)
 num_local_round = 1
 params = {
     "objective": "binary:logistic",
-    "eta": 0.1,  # Learning rate
+    "eta": 0.01,  # Learning rate
     "max_depth": 8,
     "eval_metric": "auc",
     "nthread": 16,
@@ -90,7 +93,7 @@ class XgbClient(fl.client.Client):
         self.train_data = train_data
         self.valid_data = valid_data
         self.train_dmatrix = None
-        self.valid_dmatrix = None
+        self.valid_dmatrix = transform_dataset_to_dmatrix(valid_data)
 
     def get_parameters(self, ins: GetParametersIns) -> GetParametersRes:
         _ = (self, ins)
@@ -124,7 +127,6 @@ class XgbClient(fl.client.Client):
         # Reformat data to DMatrix for xgboost
         log(INFO, "Reformatting data...")
         self.train_dmatrix = transform_dataset_to_dmatrix(train_data)
-        self.valid_dmatrix = transform_dataset_to_dmatrix(self.valid_data)
 
         if global_round == 1:
             # First round local training
@@ -157,33 +159,6 @@ class XgbClient(fl.client.Client):
             parameters=Parameters(tensor_type="", tensors=[local_model_bytes]),
             num_examples=self.num_train,
             metrics={},
-        )
-
-    def evaluate(self, ins: EvaluateIns) -> EvaluateRes:
-        # Load global model
-        bst = xgb.Booster(params=self.params)
-        for para in ins.parameters.tensors:
-            para_b = bytearray(para)
-        bst.load_model(para_b)
-
-        # Run evaluation
-        eval_results = bst.eval_set(
-            evals=[(self.valid_dmatrix, "valid")],
-            iteration=bst.num_boosted_rounds() - 1,
-        )
-        auc = round(float(eval_results.split("\t")[1].split(":")[1]), 4)
-
-        global_round = ins.config["global_round"]
-        log(INFO, f"AUC = {auc} at round {global_round}")
-
-        return EvaluateRes(
-            status=Status(
-                code=Code.OK,
-                message="OK",
-            ),
-            loss=0.0,
-            num_examples=self.num_val,
-            metrics={"AUC": auc},
         )
 
 

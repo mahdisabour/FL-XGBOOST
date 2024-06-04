@@ -92,7 +92,7 @@ def get_x_y(
 ):
     if binary:
         df['classify_label'] = df.apply(
-            lambda row: 1 if row[" Label"] > 0 else 0, 
+            lambda row: 1 if int(row[" Label"]) > 0 else 0, 
             axis=1
         )
     else:
@@ -118,17 +118,13 @@ def get_x_y(
 
 
 if __name__ == "__main__":
-    paths = get_paths(1, 0, "processed_data_3")
-    df = load_dataset(paths=paths)
-    
-    print(len(df))
+    paths = get_paths(1, 0, "data")
+    train = load_dataset(paths=paths[0:-2], preprocess=True, sample_size=-1)
+    test = load_dataset(paths=paths[-2:], preprocess=True, sample_size=-1)
 
-    # print(sorted(df[" Label"].unique()))
-    # df = df.sample(frac=1).reset_index(drop=True)
-    # train, test = train_test_split(df, random_state=42, test_size=0.1)
-    # test.to_csv("processed_data_3/test.csv", index=False)
-    # split_and_save_data_frame(
-    #     df=train,
-    #     output_path="processed_data_3/",
-    #     file_counts=8
-    # )
+    test.to_csv("processed_data_2/test.csv", index=False)
+    split_and_save_data_frame(
+        df=train,
+        output_path="processed_data_2/",
+        file_counts=32
+    )
