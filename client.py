@@ -27,6 +27,7 @@ import data_handler
 
 
 BASE_DATASET_PATH = "processed_data_2"
+LEARNING_RATE = 0.1
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -65,7 +66,7 @@ num_train, num_val = len(train), len(valid)
 num_local_round = 1
 params = {
     "objective": "binary:logistic",
-    "eta": 0.01,  # Learning rate
+    "eta": LEARNING_RATE,  # Learning rate
     "max_depth": 8,
     "eval_metric": "auc",
     "nthread": 16,

@@ -14,11 +14,11 @@ import data_handler
 num_rounds = 20
 num_clients = 8
 BASE_DATASET_PATH = "processed_data_2"
-
+LEARNING_RATE = 0.1
 
 BST_PARAMS = {
     "objective": "binary:logistic",
-    "eta": 0.01,  # Learning rate
+    "eta": LEARNING_RATE,  # Learning rate
     "max_depth": 8,
     "eval_metric": "auc",
     "nthread": 16,
