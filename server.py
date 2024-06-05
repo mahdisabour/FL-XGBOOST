@@ -2,7 +2,7 @@ from logging import INFO
 
 import pandas as pd 
 import xgboost as xgb
-from typing import Dict, Optional, Tuple
+from typing import Dict
 import flwr as fl
 from flwr.server.strategy import FedXgbBagging
 from flwr.common import Parameters, Scalar
@@ -11,9 +11,9 @@ from flwr.common.logger import log
 import data_handler
 
 # FL experimental settings
-num_rounds = 20
-NUM_CLIENTS = 8
-BASE_DATASET_PATH = "processed_data_2"
+num_rounds = 50000
+NUM_CLIENTS = 2
+BASE_DATASET_PATH = "processed_data_3"
 LEARNING_RATE = 0.1
 
 BST_PARAMS = {

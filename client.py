@@ -1,19 +1,14 @@
 import argparse
 import warnings
-from typing import Union
 from logging import INFO
-from datasets import Dataset, DatasetDict
 import xgboost as xgb
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import flwr as fl
-from flwr_datasets import FederatedDataset
 from flwr.common.logger import log
 from flwr.common import (
     Code,
-    EvaluateIns,
-    EvaluateRes,
     FitIns,
     FitRes,
     GetParametersIns,
@@ -21,14 +16,13 @@ from flwr.common import (
     Parameters,
     Status,
 )
-from flwr_datasets.partitioner import IidPartitioner
 
 import data_handler
 
 
-BASE_DATASET_PATH = "processed_data_2"
+BASE_DATASET_PATH = "processed_data_3"
 LEARNING_RATE = 0.1
-NUM_CLIENTS = 8
+NUM_CLIENTS = 2
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -58,7 +52,7 @@ paths = data_handler.get_paths(
     client_num=args.partition_id,
     num_of_clients=NUM_CLIENTS
 )
-data = data_handler.load_dataset(paths=paths[:1], sample_size=-1)
+data = data_handler.load_dataset(paths=paths, sample_size=-1)
 train, valid = train_test_split(data, test_size=0.05)
 
 num_train, num_val = len(train), len(valid)
@@ -124,7 +118,8 @@ class XgbClient(fl.client.Client):
         global_round = int(ins.config["global_round"])
         all_rounds = int(ins.config["all_rounds"])
         train_step = len(self.train_data) // all_rounds
-        train_data = self.train_data[(global_round-1)*train_step:global_round*train_step]
+        # train_data = self.train_data[(global_round-1)*train_step:global_round*train_step]
+        train_data = self.train_data.sample(n=20)
 
         # Reformat data to DMatrix for xgboost
         log(INFO, "Reformatting data...")

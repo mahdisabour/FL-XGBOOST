@@ -4,9 +4,9 @@ cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/
 
 echo "Starting server"
 python server.py &
-sleep 30  # Sleep for 5s to give the server enough time to start
+sleep 40  # Sleep for 5s to give the server enough time to start
 
-for i in `seq 0 7`; do
+for i in `seq 0 1`; do
     echo "Starting client $i"
     python client.py --partition-id=$i &> /dev/null &
 done

@@ -50,7 +50,7 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     # corr_features = correlation(df, 0.85)
     # df.drop(corr_features,axis=1,inplace=True)
 
-    df = df.groupby(' Label').filter(lambda x:len(x)>10000)
+    # df = df.groupby(' Label').filter(lambda x:len(x)>10000)
     return df
 
 
@@ -69,7 +69,7 @@ def get_paths(
         base_path: str = "processed_data/data"
     ) -> list[str]:
     df_pathes = [os.path.join(base_path, path)
-                for path in os.listdir(base_path)]    
+                for path in os.listdir(base_path) if "test" not in path]
     step = int(len(df_pathes) / num_of_clients)    
     return df_pathes[client_num*step:(client_num+1)*step]
 
@@ -119,12 +119,12 @@ def get_x_y(
 
 if __name__ == "__main__":
     paths = get_paths(1, 0, "data")
-    train = load_dataset(paths=paths[0:-2], preprocess=True, sample_size=-1)
-    test = load_dataset(paths=paths[-2:], preprocess=True, sample_size=-1)
+    train = load_dataset(paths=paths[0:-1], preprocess=True, sample_size=-1)
+    test = load_dataset(paths=paths[-1:], preprocess=True, sample_size=-1)
 
-    test.to_csv("processed_data_2/test.csv", index=False)
+    test.to_csv("processed_data_4/test.csv", index=False)
     split_and_save_data_frame(
         df=train,
-        output_path="processed_data_2/",
+        output_path="processed_data_4/",
         file_counts=32
     )
