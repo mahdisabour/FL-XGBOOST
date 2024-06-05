@@ -1,4 +1,5 @@
 from logging import INFO
+import argparse
 
 import pandas as pd 
 import xgboost as xgb
@@ -11,8 +12,7 @@ from flwr.common.logger import log
 import data_handler
 
 # FL experimental settings
-num_rounds = 50000
-NUM_CLIENTS = 2
+num_rounds = 1000
 BASE_DATASET_PATH = "processed_data_3"
 LEARNING_RATE = 0.1
 
@@ -75,23 +75,30 @@ def config_func(rnd: int) -> Dict[str, str]:
     }
     return config
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Flower")
+    parser.add_argument(
+        "--n-clients",
+        type=int,
+        default=1,
+    )
+    args = parser.parse_args()
 
-# Define strategy
-strategy = FedXgbBagging(
-    min_fit_clients=NUM_CLIENTS,
-    min_available_clients=NUM_CLIENTS,
-    min_evaluate_clients=NUM_CLIENTS,
-    fraction_evaluate=1.0,
-    evaluate_metrics_aggregation_fn=None,
-    on_evaluate_config_fn=config_func,
-    on_fit_config_fn=config_func,
-    evaluate_function=get_evaluate_fn(),
+    # Define strategy
+    strategy = FedXgbBagging(
+        min_fit_clients=args.n_clients,
+        min_available_clients=args.n_clients,
+        min_evaluate_clients=args.n_clients,
+        fraction_evaluate=1.0,
+        evaluate_metrics_aggregation_fn=None,
+        on_evaluate_config_fn=config_func,
+        on_fit_config_fn=config_func,
+        evaluate_function=get_evaluate_fn(),
 
-)
-
-# Start Flower server
-fl.server.start_server(
-    server_address="0.0.0.0:8080",
-    config=fl.server.ServerConfig(num_rounds=num_rounds),
-    strategy=strategy,
-)
+    )
+    # Start Flower server
+    fl.server.start_server(
+        server_address="0.0.0.0:8080",
+        config=fl.server.ServerConfig(num_rounds=num_rounds),
+        strategy=strategy,
+    )

@@ -22,7 +22,7 @@ import data_handler
 
 BASE_DATASET_PATH = "processed_data_3"
 LEARNING_RATE = 0.1
-NUM_CLIENTS = 2
+SAMPLE_SIZE = 20
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -34,6 +34,11 @@ parser.add_argument(
     default=0,
     type=int,
     help="Partition ID used for the current client.",
+)
+parser.add_argument(
+    "--n-clients",
+    type=int,
+    default=1,
 )
 args = parser.parse_args()
 
@@ -50,7 +55,7 @@ log(INFO, "Loading partition...")
 paths = data_handler.get_paths(
     base_path=BASE_DATASET_PATH,
     client_num=args.partition_id,
-    num_of_clients=NUM_CLIENTS
+    num_of_clients=args.n_clients
 )
 data = data_handler.load_dataset(paths=paths, sample_size=-1)
 train, valid = train_test_split(data, test_size=0.05)
@@ -119,7 +124,7 @@ class XgbClient(fl.client.Client):
         all_rounds = int(ins.config["all_rounds"])
         train_step = len(self.train_data) // all_rounds
         # train_data = self.train_data[(global_round-1)*train_step:global_round*train_step]
-        train_data = self.train_data.sample(n=20)
+        train_data = self.train_data.sample(n=SAMPLE_SIZE)
 
         # Reformat data to DMatrix for xgboost
         log(INFO, "Reformatting data...")
