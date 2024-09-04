@@ -1,4 +1,4 @@
-# Federated Learning using XGBOOST algorithm using Flower 
+# Federated Learning using XGBOOST algorithm  
 
 ## RUN
 ```shell
